@@ -106,4 +106,53 @@ class UndoRedoIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
     }
+
+    @Test
+    void redo_without_previous_undo_should_return_conflict() throws Exception {
+        // when + then
+        mockMvc.perform(post("/api/redo"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void redo_after_undo_should_restore_deleted_todo() throws Exception {
+        // given: create one todo
+        String createBody = """
+                {
+                  "description": "Redo Test",
+                  "status": "OPEN"
+                }
+                """;
+
+        mockMvc.perform(post("/api/todo")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody))
+                .andExpect(status().isCreated());
+
+        // ensure it exists
+        mockMvc.perform(get("/api/todo"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].description").value("Redo Test"));
+
+        // when: undo (removes todo)
+        mockMvc.perform(post("/api/undo"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/todo"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        // and when: redo (restores todo)
+        mockMvc.perform(post("/api/redo"))
+                .andExpect(status().isNoContent());
+
+        // then: todo is back
+        mockMvc.perform(get("/api/todo"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].description").value("Redo Test"))
+                .andExpect(jsonPath("$[0].status").value("OPEN"));
+    }
+
 }
