@@ -2,7 +2,6 @@ package de.heinzdanner.recapprojekt_backend.todo;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -10,46 +9,36 @@ import java.util.List;
 @RequestMapping("/api/todo")
 public class TodoController {
 
-    private final TodoRepository repo;
+    private final TodoService service;
 
-    public TodoController(TodoRepository repo) {
-        this.repo = repo;
+    public TodoController(TodoService service) {
+        this.service = service;
     }
 
     @GetMapping
     public List<Todo> getAll() {
-        return repo.findAll();
+        return service.getAll();
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Todo addTodo(@RequestBody TodoDto dto) {
-        Todo todo = new Todo(null, dto.description(), dto.status());
-        return repo.save(todo);
+        return service.create(dto);
     }
 
     @GetMapping("/{id}")
     public Todo getById(@PathVariable String id) {
-        return repo.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Todo not found"));
+        return service.getById(id);
     }
 
     @PutMapping("/{id}")
     public Todo update(@PathVariable String id, @RequestBody TodoDto dto) {
-        if (!repo.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Todo not found");
-        }
-
-        Todo updatedTodo = new Todo(id, dto.description(), dto.status());
-        return repo.save(updatedTodo);
+        return service.update(id, dto);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String id) {
-        if (!repo.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Todo not found");
-        }
-        repo.deleteById(id);
+        service.delete(id);
     }
 }
